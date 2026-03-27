@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pokemon Boricua Engine Starter</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>Pokemon Boricua Engine Starter</h1>
+          <p>Original, expandable monster-battler foundation for GitHub Pages</p>
+        </div>
+        <div class="status-pill" id="sceneIndicator">Loading…</div>
+      </header>
+
+      <main class="layout">
+        <section class="game-panel">
+          <canvas id="gameCanvas" width="960" height="576" aria-label="Game canvas"></canvas>
+          <div class="controls-bar">
+            <span><strong>Move:</strong> Arrow Keys / WASD</span>
+            <span><strong>Interact:</strong> Space / Enter</span>
+            <span><strong>Battle Select:</strong> 1–4</span>
+          </div>
+        </section>
+
+        <aside class="sidebar">
+          <section class="card">
+            <h2>What’s Included</h2>
+            <ul>
+              <li>Tile-based overworld movement</li>
+              <li>Encounter zones with random battles</li>
+              <li>Turn-based battle loop</li>
+              <li>Creature data and move tables</li>
+              <li>Scene system ready for expansion</li>
+            </ul>
+          </section>
+
+          <section class="card">
+            <h2>Starter Notes</h2>
+            <p>
+              This project uses original placeholder creatures, names, map layouts, and UI. It is a clean base
+              engine you can evolve into your own game.
+            </p>
+          </section>
+
+          <section class="card">
+            <h2>Immediate Expansion Targets</h2>
+            <ol>
+              <li>Replace placeholder art with custom sprites</li>
+              <li>Add NPC trainers and dialogue trees</li>
+              <li>Create multiple maps and indoor scenes</li>
+              <li>Add inventory, capture, leveling, and save data</li>
+            </ol>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
