@@ -1,4 +1,4 @@
-export const WALKABLE_TILES = new Set(['.', 'g', 's', 'w']);
+export const WALKABLE_TILES = new Set(['.', 'g', 's', 'w', 'd', 'f', 'u']);
 
 export function isTileWalkable(tile) {
   return WALKABLE_TILES.has(tile);

@@ -1,12 +1,16 @@
 export const MOVES = {
   scratch: { key: 'scratch', name: 'Scratch', power: 7, type: 'Normal', accuracy: 1 },
   ember: { key: 'ember', name: 'Ember', power: 10, type: 'Fire', accuracy: 0.95 },
+  kindle: { key: 'kindle', name: 'Kindle', power: 8, type: 'Fire', accuracy: 0.98 },
   tackle: { key: 'tackle', name: 'Tackle', power: 7, type: 'Normal', accuracy: 1 },
   'vine-whip': { key: 'vine-whip', name: 'Vine Whip', power: 9, type: 'Leaf', accuracy: 0.95 },
+  'reed-lash': { key: 'reed-lash', name: 'Reed Lash', power: 8, type: 'Leaf', accuracy: 0.96 },
   pounce: { key: 'pounce', name: 'Pounce', power: 6, type: 'Normal', accuracy: 1 },
   'splash-burst': { key: 'splash-burst', name: 'Splash Burst', power: 10, type: 'Water', accuracy: 0.95 },
+  'tide-slap': { key: 'tide-slap', name: 'Tide Slap', power: 8, type: 'Water', accuracy: 0.97 },
   bump: { key: 'bump', name: 'Bump', power: 6, type: 'Normal', accuracy: 1 },
   'stone-toss': { key: 'stone-toss', name: 'Stone Toss', power: 9, type: 'Stone', accuracy: 0.92 },
+  'gravel-kick': { key: 'gravel-kick', name: 'Gravel Kick', power: 8, type: 'Stone', accuracy: 0.95 },
   peck: { key: 'peck', name: 'Peck', power: 7, type: 'Wind', accuracy: 1 },
   gust: { key: 'gust', name: 'Gust', power: 9, type: 'Wind', accuracy: 0.96 },
 };
