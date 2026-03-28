@@ -14,9 +14,8 @@ export class OverworldScene {
     this.cameraTarget = { x: 0, y: 0 };
     this.motion = null;
     this.bump = null;
-    this.pendingTransition = null;
-    this.fade = { alpha: 0, direction: 0, outDuration: 0.18, inDuration: 0.24, kind: null };
-    this.arrivalBanner = null;
+    this.pendingWarp = null;
+    this.fade = { alpha: 0, direction: 0, outDuration: 0.18, inDuration: 0.24 };
     this.npcs = new NPCSystem();
     this.trainerEncounter = null;
     this.snapCameraToPlayer();
@@ -31,16 +30,10 @@ export class OverworldScene {
     this.updateBump(deltaSeconds);
     if (this.trainerEncounter) this.npcs.updateMotionOnly(this.world, deltaSeconds);
     this.updateWarpFade(deltaSeconds);
-    this.updateArrivalBanner(deltaSeconds);
     this.updateTrainerEncounter(deltaSeconds);
 
     if (this.game.dialogue.active) {
       if (!this.motion && !this.isTransitionLocked() && this.game.input.wasPressed(' ', 'enter')) this.game.dialogue.advance();
-      this.updateCamera(deltaSeconds);
-      return;
-    }
-
-    if (this.game.scriptSystem.active) {
       this.updateCamera(deltaSeconds);
       return;
     }
@@ -92,13 +85,12 @@ export class OverworldScene {
     this.fade.alpha = clamp(this.fade.alpha + this.fade.direction * amount, 0, 1);
 
     if (this.fade.direction > 0 && this.fade.alpha >= 1) {
-      if (this.pendingTransition) {
-        const transitionResult = this.game.transitionToLocation(this.pendingTransition);
-        this.pendingTransition = null;
+      if (this.pendingWarp) {
+        this.game.transitionToWarp(this.pendingWarp);
+        this.pendingWarp = null;
         this.motion = null;
         this.bump = null;
         this.snapCameraToPlayer();
-        this.showArrivalBanner(transitionResult);
         this.fade.direction = -1;
         return;
       }
@@ -109,14 +101,7 @@ export class OverworldScene {
     if (this.fade.direction < 0 && this.fade.alpha <= 0) {
       this.fade.alpha = 0;
       this.fade.direction = 0;
-      this.fade.kind = null;
     }
-  }
-
-  updateArrivalBanner(deltaSeconds) {
-    if (!this.arrivalBanner) return;
-    this.arrivalBanner.timer -= deltaSeconds;
-    if (this.arrivalBanner.timer <= 0) this.arrivalBanner = null;
   }
 
   updateTrainerEncounter(deltaSeconds) {
@@ -191,11 +176,6 @@ export class OverworldScene {
     const nextTile = this.getTile(nextX, nextY);
 
     if (!isTileWalkable(nextTile) || this.npcs.isOccupied(this.world, nextX, nextY)) {
-      const connection = this.getConnectionForStep(player.x, player.y, dx, dy);
-      if (connection) {
-        this.startTransition(connection);
-        return;
-      }
       if (!this.bump) this.bump = { dx, dy, elapsed: 0, duration: 0.10 };
       return;
     }
@@ -229,146 +209,33 @@ export class OverworldScene {
         return;
       }
 
-      let script;
-      if (npc.id === 'tala') {
-        script = this.game.getTalaScript();
-      } else {
-        script = npc.trainer && this.isTrainerDefeated(npc.id)
-          ? (npc.trainer.defeatedScript || npc.script)
-          : npc.script;
-      }
-      if (script?.length) this.game.runScript(script, { sceneKey: 'overworld', npc });
+      const script = npc.trainer && this.isTrainerDefeated(npc.id)
+        ? (npc.trainer.defeatedScript || npc.script)
+        : npc.script;
+      if (script?.length) this.game.dialogue.begin(script);
       return;
     }
 
-    const fieldGate = this.getFieldGateInFront();
-    if (fieldGate) {
-      const canClear = this.game.hasFieldAbility(fieldGate.abilityKey);
-      const script = canClear
-        ? [
-            { type: 'clearFieldGate', gateId: fieldGate.id },
-            ...(fieldGate.clearedScript || defaultClearedGateScript(fieldGate)),
-          ]
-        : (fieldGate.blockedScript || defaultBlockedGateScript(fieldGate));
-      this.game.runScript(script, { sceneKey: 'overworld', gate: fieldGate });
-      return;
-    }
-
-    const interaction = this.getInteractionInFront() || this.getPickupUnderfoot();
-    if (!interaction) return;
-
-    if (interaction.type === 'sign') {
-      this.game.runScript(interaction.script, { sceneKey: 'overworld', interaction });
+    const interaction = this.getInteractionInFront();
+    if (interaction?.type === 'sign') {
+      this.game.dialogue.begin(interaction.script);
       if (interaction.x === 5 && interaction.y === 9) this.game.state.flags.shrineVisited = true;
-      return;
-    }
-
-    if (interaction.type === 'healer') {
-      this.game.runScript([
-        { type: 'healParty' },
-        ...(interaction.script || [{ speaker: 'Attendant', text: 'Your field party is back to full strength.' }]),
-      ], { sceneKey: 'overworld', interaction });
-      return;
-    }
-
-    if (interaction.type === 'storage-terminal') {
-      this.game.changeScene('storage', { returnScene: 'overworld' });
-      return;
-    }
-
-    if (interaction.type === 'codex-kiosk') {
-      this.game.changeScene('codex', { returnScene: 'overworld' });
-      return;
-    }
-
-    if (interaction.type === 'shop-counter') {
-      this.game.visitHarborShop();
-      this.game.changeScene('shop', { returnScene: 'overworld' });
-      return;
-    }
-
-    if (interaction.type === 'pickup') {
-      const rewards = [];
-      const rewardCommands = [{ type: 'setFlag', key: `collectedInteractions.${interaction.id}`, value: true }];
-      if (interaction.itemKey && interaction.amount) {
-        rewardCommands.push({ type: 'giveItem', itemKey: interaction.itemKey, amount: interaction.amount });
-        rewards.push(`${interaction.amount} ${this.game.getItem(interaction.itemKey)?.name || interaction.itemKey}`);
-      }
-      if (interaction.money) {
-        rewardCommands.push({ type: 'giveMoney', amount: interaction.money });
-        rewards.push(`${interaction.money} coral`);
-      }
-      const label = interaction.label || 'Field Cache';
-      const rewardLine = rewards.length > 0
-        ? `Received ${joinRewardLabels(rewards)}.`
-        : 'The cache was empty.';
-      this.game.runScript([
-        ...rewardCommands,
-        { speaker: label, text: interaction.foundText || 'You uncovered a small route cache.' },
-        { speaker: label, text: rewardLine },
-      ], { sceneKey: 'overworld', interaction });
     }
   }
 
   checkEncounter(tile) {
     if (tile !== 'g') return;
     if (this.game.state.encounterCooldown > 0) return;
-    const encounterRate = this.world.encounterRate ?? 0.16;
-    if (chance(encounterRate)) {
-      this.game.startBattle({
-        mapKey: this.world.key,
-        areaName: this.world.name,
-        backgroundKey: this.world.battleBackdropKey,
-        encounters: this.world.encounters,
-      });
-    }
+    if (chance(0.16)) this.game.startBattle(this.world.encounters);
   }
 
   checkWarp() {
-    if (this.pendingTransition || this.fade.direction > 0) return;
+    if (this.pendingWarp || this.fade.direction > 0) return;
     const player = this.game.state.player;
     const warp = this.world.warps.find((entry) => entry.x === player.x && entry.y === player.y);
     if (!warp) return;
-    this.startTransition({
-      kind: warp.kind || 'door',
-      outDuration: warp.kind === 'door' ? 0.12 : 0.18,
-      inDuration: warp.kind === 'door' ? 0.16 : 0.24,
-      ...warp,
-    });
-  }
-
-  startTransition(transition) {
-    this.pendingTransition = transition;
+    this.pendingWarp = warp;
     this.fade.direction = 1;
-    this.fade.kind = transition.kind || 'route';
-    this.fade.outDuration = transition.outDuration || (transition.kind === 'door' ? 0.12 : 0.18);
-    this.fade.inDuration = transition.inDuration || (transition.kind === 'door' ? 0.16 : 0.24);
-  }
-
-  getConnectionForStep(playerX, playerY, dx, dy) {
-    const edge = getEdgeForStep(this.world, playerX, playerY, dx, dy);
-    if (!edge) return null;
-
-    const axisValue = dx !== 0 ? playerY : playerX;
-    return (this.world.connections || []).find((connection) => (
-      connection.edge === edge
-      && axisValue >= connection.start
-      && axisValue <= connection.end
-    )) || null;
-  }
-
-  showArrivalBanner(transitionResult) {
-    const destinationMap = this.game.getCurrentMap();
-    const title = destinationMap?.name || transitionResult?.toMapName || 'New Area';
-    const subtitle = transitionResult?.arrivalText
-      || (transitionResult?.kind === 'door' ? 'Interior' : 'Connected route');
-
-    this.arrivalBanner = {
-      title,
-      subtitle,
-      timer: transitionResult?.kind === 'door' ? 1.25 : 1.8,
-      duration: transitionResult?.kind === 'door' ? 1.25 : 1.8,
-    };
   }
 
   checkTrainerSight() {
@@ -485,13 +352,6 @@ export class OverworldScene {
       };
     }
 
-    if (this.pendingTransition && this.fade.direction > 0) {
-      const drift = easeInOutQuad(Math.min(1, this.fade.alpha)) * (this.pendingTransition.kind === 'door' ? 0.12 : 0.28);
-      const step = directionStep(this.pendingTransition.facing || this.game.state.player.facing);
-      renderX += step.dx * drift;
-      renderY += step.dy * drift;
-    }
-
     return {
       x: renderX,
       y: renderY,
@@ -514,7 +374,7 @@ export class OverworldScene {
   }
 
   isTransitionLocked() {
-    return Boolean(this.pendingTransition || this.fade.direction !== 0 || this.fade.alpha > 0.001);
+    return Boolean(this.pendingWarp || this.fade.direction !== 0 || this.fade.alpha > 0.001);
   }
 
   isControlLocked() {
@@ -527,15 +387,11 @@ export class OverworldScene {
 
   getTile(x, y) {
     if (y < 0 || y >= this.world.height || x < 0 || x >= this.world.width) return '#';
-    const gate = this.getFieldGateAt(x, y);
-    if (gate) return this.game.isFieldGateCleared(gate.id) ? (gate.clearedTile || '.') : (gate.tile || 'v');
     return this.world.tiles[y][x];
   }
 
   getInteractionAt(x, y) {
-    const interaction = this.world.interactions.find((entry) => entry.x === x && entry.y === y) || null;
-    if (interaction?.type === 'pickup' && this.game.isInteractionCollected(interaction.id)) return null;
-    return interaction;
+    return this.world.interactions.find((entry) => entry.x === x && entry.y === y) || null;
   }
 
   getFacingOffset() {
@@ -560,92 +416,18 @@ export class OverworldScene {
     return this.getInteractionAt(player.x + dx, player.y + dy);
   }
 
-  getFieldGateAt(x, y) {
-    return (this.world.fieldGates || []).find((entry) => entry.x === x && entry.y === y && !this.game.isFieldGateCleared(entry.id)) || null;
-  }
-
-  getFieldGateInFront() {
-    const player = this.game.state.player;
-    const [dx, dy] = this.getFacingOffset();
-    return this.getFieldGateAt(player.x + dx, player.y + dy);
-  }
-
-  getPickupUnderfoot() {
-    const player = this.game.state.player;
-    const interaction = this.getInteractionAt(player.x, player.y);
-    return interaction?.type === 'pickup' ? interaction : null;
-  }
-
   getFacingTowardPlayer(npc) {
     const player = this.game.state.player;
     if (Math.abs(player.x - npc.x) > Math.abs(player.y - npc.y)) return player.x < npc.x ? 'left' : 'right';
     return player.y < npc.y ? 'up' : 'down';
   }
 
-  getDebugState() {
-    const player = this.game.state.player;
-    const npcAhead = this.getNpcInFront();
-    const interactionAhead = this.getInteractionInFront();
-    const pickupUnderfoot = this.getPickupUnderfoot();
-    const fieldGateAhead = this.getFieldGateInFront();
-
-    return {
-      scene: 'overworld',
-      objective: this.game.getCurrentObjectiveText(),
-      world: {
-        key: this.world.key,
-        name: this.world.name,
-        width: this.world.width,
-        height: this.world.height,
-        battleBackdropKey: this.world.battleBackdropKey || null,
-        encounterRate: this.world.encounterRate ?? 0.16,
-      },
-      playerTile: {
-        x: player.x,
-        y: player.y,
-        facing: player.facing,
-        tile: this.getTile(player.x, player.y),
-      },
-      motion: this.motion ? {
-        fromX: this.motion.fromX,
-        fromY: this.motion.fromY,
-        toX: this.motion.toX,
-        toY: this.motion.toY,
-        progress: Math.round((this.motion.elapsed / this.motion.duration) * 1000) / 1000,
-      } : null,
-      bump: this.bump ? {
-        dx: this.bump.dx,
-        dy: this.bump.dy,
-        progress: Math.round((this.bump.elapsed / this.bump.duration) * 1000) / 1000,
-      } : null,
-      pendingTransition: this.pendingTransition ? {
-        kind: this.pendingTransition.kind || 'route',
-        toMapKey: this.pendingTransition.toMapKey,
-        toX: this.pendingTransition.toX,
-        toY: this.pendingTransition.toY,
-      } : null,
-      trainerEncounter: this.trainerEncounter ? {
-        npcId: this.trainerEncounter.npcId,
-        phase: this.trainerEncounter.phase,
-        timer: Math.round((this.trainerEncounter.timer || 0) * 1000) / 1000,
-        chaseStepsRemaining: this.trainerEncounter.chaseSteps?.length || 0,
-      } : null,
-      npcAhead: npcAhead ? summarizeNpc(npcAhead, this.isTrainerDefeated(npcAhead.id)) : null,
-      interactionAhead: interactionAhead ? summarizeInteraction(interactionAhead) : null,
-      pickupUnderfoot: pickupUnderfoot ? summarizeInteraction(pickupUnderfoot) : null,
-      fieldGateAhead: fieldGateAhead ? summarizeFieldGate(fieldGateAhead, this.game.hasFieldAbility(fieldGateAhead.abilityKey)) : null,
-      npcs: this.npcs.getAll(this.world).map((npc) => summarizeNpc(npc, this.isTrainerDefeated(npc.id))),
-    };
-  }
-
   render(ctx) {
     const playerRenderState = this.getPlayerRenderState();
     this.drawBackground(ctx);
     this.drawMap(ctx);
-    this.drawInteractionMarkers(ctx);
     this.drawTrainerSight(ctx);
     this.drawActors(ctx, playerRenderState);
-    this.drawArrivalBanner(ctx);
     this.drawHud(ctx);
     this.drawDialogue(ctx);
     this.drawTrainerAlert(ctx);
@@ -721,71 +503,39 @@ export class OverworldScene {
     }
   }
 
-  drawArrivalBanner(ctx) {
-    if (!this.arrivalBanner) return;
-
-    const life = this.arrivalBanner.timer / this.arrivalBanner.duration;
-    const alpha = Math.min(1, Math.max(0, Math.sin(life * Math.PI)));
-    const width = 340;
-    const height = 74;
-    const x = Math.round((this.game.width - width) / 2);
-    const y = 20;
-
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    drawPanel(ctx, x, y, width, height, '');
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = '700 22px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(this.arrivalBanner.title, x + width / 2, y + 30);
-    ctx.fillStyle = '#c7d4e3';
-    ctx.font = '15px Inter, sans-serif';
-    ctx.fillText(this.arrivalBanner.subtitle, x + width / 2, y + 53);
-    ctx.restore();
-  }
-
   drawHud(ctx) {
     const player = this.game.state.player;
     const starter = player.party[0];
-    const codexCounts = this.game.getCodexCounts();
     const tileHere = this.getTile(player.x, player.y);
     const npcAhead = this.getNpcInFront();
     const interactionAhead = this.getInteractionInFront();
-    const pickupUnderfoot = this.getPickupUnderfoot();
-    const fieldGateAhead = this.getFieldGateInFront();
-    const focusInteraction = interactionAhead || pickupUnderfoot;
     const hint = this.trainerEncounter
       ? 'A trainer has locked onto you.'
       : npcAhead?.trainer && !this.isTrainerDefeated(npcAhead.id)
         ? `Press Space to challenge ${npcAhead.name}.`
         : npcAhead
           ? `Press Space to talk to ${npcAhead.name}.`
-          : fieldGateAhead
-            ? describeFieldGatePrompt(fieldGateAhead, this.game.hasFieldAbility(fieldGateAhead.abilityKey))
-          : focusInteraction
-            ? describeInteractionPrompt(focusInteraction)
+          : interactionAhead
+            ? 'Press Space to read the nearby marker.'
             : 'Trainer sight cones are live. Red tiles show where undefeated trainers can spot you.';
 
-    drawPanel(ctx, 16, 16, 436, 158, 'Explorer Status');
+    drawPanel(ctx, 16, 16, 420, 126, 'Explorer Status');
     drawTextBlock(
       ctx,
       [
         `${player.name} • ${this.world.name}`,
         `Steps: ${player.steps} • Tile: ${TILE_LABELS[tileHere] || tileHere}`,
-        `Facing: ${player.facing} • Money: ${this.game.getMoney()} coral • Tonics: ${player.inventory.tonic ?? 0} • Orbs: ${player.inventory.snareOrb ?? 0}`,
-        `Codex: ${codexCounts.seen} seen • ${codexCounts.caught} caught`,
-        `Goal: ${this.game.getCurrentObjectiveText()}`,
+        `Facing: ${player.facing} • Tonics: ${player.inventory.tonic}`,
         hint,
       ],
       28,
-      58,
+      48,
       18,
-      392,
+      376,
     );
 
     drawPanel(ctx, 16, this.game.height - 144, 364, 128, 'Lead Creature');
-    if (starter) drawCreatureBadge(ctx, starter, 28, this.game.height - 92, false);
-    else drawTextBlock(ctx, ['No starter selected yet.'], 28, this.game.height - 76, 20, 300);
+    drawCreatureBadge(ctx, starter, 28, this.game.height - 116, false);
   }
 
   drawDialogue(ctx) {
@@ -793,37 +543,6 @@ export class OverworldScene {
     if (!block) return;
     drawPanel(ctx, 150, this.game.height - 170, 660, 126, block.speaker || 'Dialogue');
     drawTextBlock(ctx, [block.text, 'Press Space / Enter'], 176, this.game.height - 130, 22, 600);
-  }
-
-  drawInteractionMarkers(ctx) {
-    const visiblePickups = (this.world.interactions || []).filter((interaction) => (
-      interaction.type === 'pickup'
-      && !this.game.isInteractionCollected(interaction.id)
-    ));
-
-    for (const interaction of visiblePickups) {
-      const screenX = Math.round((interaction.x - this.camera.x) * TILE);
-      const screenY = Math.round((interaction.y - this.camera.y) * TILE);
-      if (screenX < -TILE || screenX > this.game.width || screenY < -TILE || screenY > this.game.height) continue;
-
-      const pulse = (Math.sin(this.game.state.clock * 5 + interaction.x * 0.5 + interaction.y * 0.3) + 1) * 0.5;
-      const size = 4 + pulse * 2;
-
-      ctx.save();
-      ctx.translate(screenX + TILE / 2, screenY + 14 + pulse * 2);
-      ctx.fillStyle = `rgba(255, 245, 186, ${0.78 + pulse * 0.16})`;
-      ctx.beginPath();
-      ctx.moveTo(0, -size);
-      ctx.lineTo(size, 0);
-      ctx.lineTo(0, size);
-      ctx.lineTo(-size, 0);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = `rgba(255,255,255,${0.34 + pulse * 0.18})`;
-      ctx.fillRect(-1, -size - 3, 2, 2);
-      ctx.fillRect(size + 2, -1, 2, 2);
-      ctx.restore();
-    }
   }
 
   drawTrainerAlert(ctx) {
@@ -851,13 +570,8 @@ export class OverworldScene {
     ctx.save();
     ctx.globalAlpha = Math.min(1, this.fade.alpha);
     const gradient = ctx.createLinearGradient(0, 0, 0, this.game.height);
-    if (this.fade.kind === 'door') {
-      gradient.addColorStop(0, '#19110b');
-      gradient.addColorStop(1, '#312014');
-    } else {
-      gradient.addColorStop(0, '#060a12');
-      gradient.addColorStop(1, '#111a2a');
-    }
+    gradient.addColorStop(0, '#060a12');
+    gradient.addColorStop(1, '#111a2a');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, this.game.width, this.game.height);
     ctx.restore();
@@ -880,85 +594,4 @@ function directionStep(direction) {
     left: { dx: -1, dy: 0 },
     right: { dx: 1, dy: 0 },
   }[direction] || { dx: 0, dy: 1 };
-}
-
-function getEdgeForStep(world, x, y, dx, dy) {
-  if (dx < 0 && x === 1) return 'left';
-  if (dx > 0 && x === world.width - 2) return 'right';
-  if (dy < 0 && y === 1) return 'up';
-  if (dy > 0 && y === world.height - 2) return 'down';
-  return null;
-}
-
-function summarizeNpc(npc, defeated) {
-  return {
-    id: npc.id,
-    name: npc.name,
-    x: npc.x,
-    y: npc.y,
-    facing: npc.facing,
-    trainer: Boolean(npc.trainer),
-    defeated,
-  };
-}
-
-function summarizeInteraction(interaction) {
-  return {
-    x: interaction.x,
-    y: interaction.y,
-    type: interaction.type,
-    preview: interaction.foundText || interaction.script?.[0]?.text || interaction.label || null,
-  };
-}
-
-function summarizeFieldGate(gate, hasAbility) {
-  return {
-    id: gate.id,
-    x: gate.x,
-    y: gate.y,
-    abilityKey: gate.abilityKey,
-    abilityLabel: gate.abilityLabel || gate.abilityKey,
-    canClear: hasAbility,
-  };
-}
-
-function describeInteractionPrompt(interaction) {
-  if (!interaction) return 'Press Space to interact.';
-  if (interaction.type === 'healer') return 'Press Space to rest your field party.';
-  if (interaction.type === 'pickup') return 'Press Space to inspect the nearby route cache.';
-  if (interaction.type === 'shop-counter') return 'Press Space to browse the harbor provisions counter.';
-  if (interaction.type === 'storage-terminal') return 'Press Space to access creature storage.';
-  if (interaction.type === 'codex-kiosk') return 'Press Space to review your codex.';
-  return 'Press Space to read the nearby marker.';
-}
-
-function describeFieldGatePrompt(gate, hasAbility) {
-  if (hasAbility) return `Press Space to use ${gate.abilityLabel || gate.abilityKey}.`;
-  return `${gate.label || 'Thorn wall'} blocks the trail.`;
-}
-
-function defaultBlockedGateScript(gate) {
-  return [
-    {
-      type: 'say',
-      speaker: gate.label || 'Bramble Wall',
-      text: gate.blockedText || `Dense growth seals the trail. You need ${gate.abilityLabel || gate.abilityKey} to cut through it.`,
-    },
-  ];
-}
-
-function defaultClearedGateScript(gate) {
-  return [
-    {
-      type: 'say',
-      speaker: gate.label || 'Bramble Wall',
-      text: gate.clearedText || `${gate.abilityLabel || gate.abilityKey} cuts the thorn wall open, revealing a new path.`,
-    },
-  ];
-}
-
-function joinRewardLabels(rewards) {
-  if (rewards.length <= 1) return rewards[0] || '';
-  if (rewards.length === 2) return `${rewards[0]} and ${rewards[1]}`;
-  return `${rewards.slice(0, -1).join(', ')}, and ${rewards[rewards.length - 1]}`;
 }

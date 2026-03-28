@@ -1,4 +1,4 @@
-import { chance, random, rngInt } from '../core/utils.js';
+import { chance, rngInt } from '../core/utils.js';
 import { easeInOutQuad, lerp } from '../core/physics.js';
 
 const DIRECTION_STEPS = {
@@ -38,7 +38,7 @@ export class NPCSystem {
       routeIndex: 0,
       wait: definition.behavior?.initialDelay ?? (0.18 * index),
       motion: null,
-      phase: index * 0.71 + random() * 0.5,
+      phase: index * 0.71 + Math.random() * 0.5,
     };
   }
 
@@ -74,7 +74,7 @@ export class NPCSystem {
     const behaviorType = npc.behavior?.type || 'stationary';
     if (behaviorType === 'stationary') {
       if (chance(0.4)) npc.facing = DIRECTION_KEYS[rngInt(0, DIRECTION_KEYS.length)];
-      npc.wait = 1 + random() * 1.35;
+      npc.wait = 1 + Math.random() * 1.35;
       return;
     }
 
@@ -83,7 +83,7 @@ export class NPCSystem {
       : this.getWanderStep(npc);
 
     if (!step) {
-      npc.wait = 0.35 + random() * 0.5;
+      npc.wait = 0.35 + Math.random() * 0.5;
       return;
     }
 
@@ -92,7 +92,7 @@ export class NPCSystem {
     npc.facing = step.direction;
 
     if (isBlocked(nextX, nextY, npc.id) || !this.withinZone(npc, nextX, nextY)) {
-      npc.wait = 0.3 + random() * 0.45;
+      npc.wait = 0.3 + Math.random() * 0.45;
       return;
     }
 
@@ -134,7 +134,7 @@ export class NPCSystem {
     }
 
     const candidates = [...DIRECTION_KEYS]
-      .sort(() => random() - 0.5)
+      .sort(() => Math.random() - 0.5)
       .map((direction) => ({ direction, ...DIRECTION_STEPS[direction] }));
 
     return candidates[0] || null;

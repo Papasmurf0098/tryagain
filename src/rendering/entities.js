@@ -41,16 +41,10 @@ function drawHumanoid(ctx, actor, camera, clock) {
 
   ctx.save();
   ctx.translate(screenX, screenY + verticalBob);
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
 
   ctx.fillStyle = 'rgba(0,0,0,0.22)';
   ctx.beginPath();
   ctx.ellipse(24, 42, shadowWidth, 4.8, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.06)';
-  ctx.beginPath();
-  ctx.ellipse(24, 40, shadowWidth * 0.72, 2.8, 0, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.translate(lean, 0);
@@ -76,30 +70,14 @@ function drawTorso(ctx, appearance, isPlayer) {
   ctx.lineTo(17, 31);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.18)';
-  ctx.lineWidth = 1.1;
-  ctx.stroke();
 
   ctx.fillStyle = appearance.shirt;
   ctx.fillRect(18, 18, 12, 12);
-  ctx.strokeStyle = 'rgba(0,0,0,0.12)';
-  ctx.strokeRect(18, 18, 12, 12);
   ctx.fillStyle = appearance.accent || '#ffffff';
   ctx.fillRect(22, 18, 4, 10);
 
   ctx.fillStyle = 'rgba(255,255,255,0.16)';
   ctx.fillRect(15, 18, 3, 10);
-  ctx.fillStyle = shadeColor(appearance.jacket, -0.18);
-  ctx.fillRect(17, 28, 14, 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.14)';
-  ctx.fillRect(17, 19, 12, 1);
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-  ctx.beginPath();
-  ctx.moveTo(19, 19);
-  ctx.lineTo(22, 23);
-  ctx.moveTo(29, 19);
-  ctx.lineTo(26, 23);
-  ctx.stroke();
   if (isPlayer) {
     ctx.fillStyle = '#d14d4d';
     ctx.beginPath();
@@ -116,43 +94,25 @@ function drawHead(ctx, appearance, facing) {
   ctx.beginPath();
   ctx.arc(24, 10, 8, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.16)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.fillStyle = shadeColor(appearance.skin, -0.04);
-  ctx.beginPath();
-  ctx.arc(16.8, 10.3, 1.5, 0, Math.PI * 2);
-  ctx.arc(31.2, 10.3, 1.5, 0, Math.PI * 2);
-  ctx.fill();
 
   ctx.fillStyle = shadeColor(appearance.skin, -0.12);
   ctx.fillRect(21, 16, 6, 3);
-  ctx.fillStyle = 'rgba(255,255,255,0.12)';
-  ctx.fillRect(21, 16, 2, 2);
 
   ctx.fillStyle = appearance.hair;
   drawHair(ctx, appearance.hairStyle, facing);
-  ctx.fillStyle = shadeColor(appearance.hair, 0.2);
-  ctx.fillRect(19, 5, 8, 2);
 
   ctx.fillStyle = '#1c1e24';
   if (facing === 'left') {
     ctx.fillRect(18, 9, 2, 2);
-    ctx.fillRect(18, 7, 2, 1);
   } else if (facing === 'right') {
     ctx.fillRect(28, 9, 2, 2);
-    ctx.fillRect(28, 7, 2, 1);
   } else {
     ctx.fillRect(20, 9, 2, 2);
     ctx.fillRect(26, 9, 2, 2);
-    ctx.fillRect(20, 7, 2, 1);
-    ctx.fillRect(26, 7, 2, 1);
   }
 
   ctx.fillStyle = 'rgba(150,72,56,0.45)';
   ctx.fillRect(22, 13, 4, 1);
-  ctx.fillRect(23, 12, 2, 1);
 }
 
 function drawHair(ctx, style = 'short', facing = 'down') {
@@ -212,32 +172,17 @@ function drawHair(ctx, style = 'short', facing = 'down') {
 }
 
 function drawArm(ctx, x, y, skin, sleeve, swing) {
-  const handY = y + 9 + swing * 0.16;
   ctx.fillStyle = skin;
   ctx.fillRect(x, y + 3 + swing * 0.16, 4, 9);
-  ctx.fillRect(x, handY, 4, 3);
-  ctx.strokeStyle = 'rgba(0,0,0,0.16)';
-  ctx.strokeRect(x, y + 3 + swing * 0.16, 4, 9);
   ctx.fillStyle = sleeve;
   ctx.fillRect(x - 1, y, 6, 7);
-  ctx.fillStyle = 'rgba(255,255,255,0.12)';
-  ctx.fillRect(x, y + 1, 3, 1);
-  ctx.strokeStyle = 'rgba(0,0,0,0.18)';
-  ctx.strokeRect(x - 1, y, 6, 7);
 }
 
 function drawLeg(ctx, x, y, pants, shoes, swing) {
-  const legY = y + Math.max(0, swing * 0.18);
   ctx.fillStyle = pants;
-  ctx.fillRect(x, legY, 5, 10);
-  ctx.fillStyle = 'rgba(255,255,255,0.08)';
-  ctx.fillRect(x + 1, legY + 1, 2, 8);
-  ctx.strokeStyle = 'rgba(0,0,0,0.16)';
-  ctx.strokeRect(x, legY, 5, 10);
+  ctx.fillRect(x, y + Math.max(0, swing * 0.18), 5, 10);
   ctx.fillStyle = shoes;
   ctx.fillRect(x - 1, y + 10 + Math.max(0, swing * 0.18), 7, 3);
-  ctx.strokeStyle = 'rgba(0,0,0,0.22)';
-  ctx.strokeRect(x - 1, y + 10 + Math.max(0, swing * 0.18), 7, 3);
 }
 
 function drawAccessory(ctx, appearance) {
@@ -302,23 +247,6 @@ export function drawBattleCreature(ctx, creature, x, y, isPlayerSide, clock) {
   ctx.arc(-18, -4, 4, 0, Math.PI * 2);
   ctx.arc(6, -4, 4, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#f8fafc';
-  ctx.beginPath();
-  ctx.arc(-17, -5, 1.1, 0, Math.PI * 2);
-  ctx.arc(7, -5, 1.1, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = 'rgba(255,255,255,0.18)';
-  ctx.beginPath();
-  ctx.ellipse(-4, 12, 18, 7, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = shadeCreature(creature.color, -0.28);
-  ctx.fillRect(-28, 26, 12, 9);
-  ctx.fillRect(12, 26, 12, 9);
-  ctx.fillStyle = '#1d2026';
-  ctx.fillRect(-31, 34, 16, 4);
-  ctx.fillRect(12, 34, 16, 4);
 
   ctx.fillStyle = '#f8fafc';
   ctx.beginPath();
@@ -327,36 +255,9 @@ export function drawBattleCreature(ctx, creature, x, y, isPlayerSide, clock) {
   ctx.lineTo(52, 10);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.18)';
-  ctx.stroke();
-
-  ctx.fillStyle = shadeCreature(creature.color, -0.16);
-  ctx.beginPath();
-  ctx.moveTo(-42, 8);
-  ctx.lineTo(-60, 2);
-  ctx.lineTo(-44, -6);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = 'rgba(32,36,42,0.2)';
-  ctx.beginPath();
-  ctx.moveTo(-10, -26);
-  ctx.lineTo(2, -34);
-  ctx.lineTo(12, -22);
-  ctx.closePath();
-  ctx.fill();
 
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
   ctx.fillRect(-10, 18, 20, 4);
-  ctx.strokeStyle = 'rgba(255,255,255,0.16)';
-  ctx.beginPath();
-  ctx.moveTo(-8, 20);
-  ctx.lineTo(8, 20);
-  ctx.moveTo(-18, 8);
-  ctx.lineTo(-6, 4);
-  ctx.moveTo(8, 8);
-  ctx.lineTo(20, 4);
-  ctx.stroke();
 
   ctx.restore();
 }

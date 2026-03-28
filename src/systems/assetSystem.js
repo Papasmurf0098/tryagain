@@ -1,5 +1,5 @@
 export class AssetSystem {
-  constructor(manifest = { images: {}, optionalImages: {}, audio: {} }) {
+  constructor(manifest = { images: {}, audio: {} }) {
     this.manifest = manifest;
     this.images = new Map();
     this.audio = new Map();
@@ -9,12 +9,10 @@ export class AssetSystem {
   async loadAll() {
     this.status = 'loading';
     const imageEntries = Object.entries(this.manifest.images || {});
-    const optionalImageEntries = Object.entries(this.manifest.optionalImages || {});
     const audioEntries = Object.entries(this.manifest.audio || {});
 
     await Promise.all([
       ...imageEntries.map(([key, src]) => this.loadImage(key, src)),
-      ...optionalImageEntries.map(([key, src]) => this.loadOptionalImage(key, src)),
       ...audioEntries.map(([key, src]) => this.loadAudio(key, src)),
     ]);
 
@@ -50,37 +48,7 @@ export class AssetSystem {
     return this.images.get(key) || null;
   }
 
-  hasImage(key) {
-    return this.images.has(key);
-  }
-
   getAudio(key) {
     return this.audio.get(key) || null;
-  }
-
-  loadOptionalImage(key, src) {
-    return fetch(src)
-      .then((response) => {
-        if (!response.ok) return null;
-        return response.blob();
-      })
-      .then((blob) => {
-        if (!blob) return null;
-        return new Promise((resolve, reject) => {
-          const image = new Image();
-          const objectUrl = URL.createObjectURL(blob);
-          image.onload = () => {
-            URL.revokeObjectURL(objectUrl);
-            this.images.set(key, image);
-            resolve(image);
-          };
-          image.onerror = () => {
-            URL.revokeObjectURL(objectUrl);
-            reject(new Error(`Failed to decode optional image: ${src}`));
-          };
-          image.src = objectUrl;
-        }).catch(() => null);
-      })
-      .catch(() => null);
   }
 }
