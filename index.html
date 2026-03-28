@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokemon Boricua Engine</title>
+  <link rel="stylesheet" href="./styles/main.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <h1>Pokemon Boricua Engine</h1>
+        <p>Modular engine foundation with scene management, data-driven creatures, and improved canvas rendering.</p>
+      </div>
+      <div class="status-pill" id="sceneIndicator">Loading…</div>
+    </header>
+
+    <main class="layout">
+      <section class="game-panel">
+        <div class="canvas-shell">
+          <canvas id="gameCanvas" width="960" height="576" aria-label="Game canvas"></canvas>
+        </div>
+        <div class="controls-bar">
+          <span><strong>Move:</strong> Arrow Keys / WASD</span>
+          <span><strong>Interact:</strong> Space / Enter</span>
+          <span><strong>Battle Select:</strong> 1–4</span>
+        </div>
+      </section>
+
+      <aside class="sidebar">
+        <section class="card">
+          <h2>Engine Layout</h2>
+          <ul>
+            <li><strong>core/</strong> loop, input, state, config</li>
+            <li><strong>data/</strong> creatures and world definitions</li>
+            <li><strong>rendering/</strong> UI, tiles, entities, high-DPI canvas</li>
+            <li><strong>scenes/</strong> overworld and battle scene modules</li>
+          </ul>
+        </section>
+
+        <section class="card">
+          <h2>Visual Improvements</h2>
+          <ul>
+            <li>Device-pixel-ratio aware canvas scaling</li>
+            <li>Higher fidelity tile rendering and shading</li>
+            <li>Animated water, grass, and creature bobbing</li>
+            <li>Softer UI panels with better contrast</li>
+          </ul>
+        </section>
+
+        <section class="card">
+          <h2>Next Expansion Targets</h2>
+          <ol>
+            <li>Sprite sheets and real art asset loading</li>
+            <li>Map streaming and portals</li>
+            <li>Save/load persistence</li>
+            <li>Dialogue scripts and quest flags</li>
+          </ol>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
