@@ -1,33 +1,67 @@
 # Pokemon Boricua Engine
 
-This build adds trainer logic to the overworld NPC system.
+Pokemon Boricua Engine is a browser-based RPG prototype with a modular scene-driven structure. This build includes overworld exploration, trainer encounters, and turn-based battles while keeping the code split into focused engine layers.
 
-## Added in this build
+## Project Layout
 
-- trainer NPCs with live sight cones
-- trainer detection when the player enters line of sight
-- alert beat before the trainer moves in
-- approach movement to close distance before battle
-- trainer battle handoff using the existing battle scene
-- defeated trainer tracking so rematches do not auto-trigger
-- trainer battles now block escape attempts
+```text
+.
+├── index.html
+├── README.md
+├── styles/
+│   └── main.css
+└── src/
+    ├── main.js
+    ├── core/
+    │   ├── config.js
+    │   ├── game.js
+    │   ├── input.js
+    │   ├── physics.js
+    │   ├── state.js
+    │   └── utils.js
+    ├── data/
+    │   ├── creatures.js
+    │   ├── maps.js
+    │   ├── moves.js
+    │   └── types.js
+    ├── rendering/
+    │   ├── canvasDisplay.js
+    │   ├── entities.js
+    │   ├── tiles.js
+    │   └── ui.js
+    ├── scenes/
+    │   ├── BattleScene.js
+    │   └── OverworldScene.js
+    └── systems/
+        ├── assetSystem.js
+        ├── battleSystem.js
+        ├── dialogueSystem.js
+        ├── npcSystem.js
+        └── saveSystem.js
+```
 
-## Trainer behavior model
+## Current Features
 
-The engine now distinguishes between:
-- **regular NPCs** for dialogue and ambient movement
-- **trainer NPCs** with sight range, intro dialogue, and battle data
+- overworld movement with keyboard controls
+- dialogue and map interactions
+- trainer NPC sight cones and encounter flow
+- turn-based battles with creature stats, moves, healing, and escape rules
+- save/load support through browser localStorage
 
-## Why this matters
+## Local Run
 
-This is the first real bridge between the world layer and battle layer:
-- spatial placement matters
-- facing direction matters
-- route planning matters
-- NPC identity now has gameplay consequences
+Serve the repo root with any static file server, then open the served `index.html`.
+
+Example:
+
+```bash
+python3 -m http.server 8000
+```
+
+Then visit `http://localhost:8000`.
 
 ## Controls
 
 - Move: Arrow keys / WASD
 - Interact: Space / Enter
-- Battle: 1-3 moves, 4 run, T tonic
+- Battle select: 1-4
